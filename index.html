@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>B3A 富泰邨 ↔ 深圳灣口岸 實時班次</title>
+<style>
+  :root{
+    --accent:#ffd100;
+    --ink:#101828;
+    --muted:#667085;
+    --line:#e4e7ec;
+    --bg:#eef1f6;
+    --card:#ffffff;
+    --ok:#12b76a;
+    --warn:#f79009;
+    --err:#d92d20;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","Helvetica Neue",
+                "PingFang HK","Noto Sans HK","Microsoft JhengHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+    padding:24px 16px 40px;
+    min-height:100vh;
+  }
+  .wrap{width:100%;max-width:520px}
+
+  /* ---------- header ---------- */
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .badge{
+    background:var(--accent);
+    color:#101828;
+    font-weight:800;
+    font-size:20px;
+    letter-spacing:.5px;
+    padding:6px 14px;
+    border-radius:10px;
+    box-shadow:0 1px 2px rgba(16,24,40,.12);
+  }
+  .co{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.3px}
+
+  /* ---------- boards ---------- */
+  .boards{display:flex;flex-direction:column;gap:30px}
+  .board{display:block}
+  .dir{
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+    margin:0 0 10px;
+    font-size:15px;font-weight:600;color:#344054;line-height:1.35;
+  }
+  .dir .arrow{color:var(--muted);font-weight:400;flex:none}
+  .dir .port{color:#0b4a8f}
+  .sub{
+    margin:-4px 0 10px;
+    font-size:11.5px;color:#98a2b3;line-height:1.4;
+  }
+
+  /* ---------- card ---------- */
+  .card{
+    background:var(--card);
+    border-radius:18px;
+    padding:6px 20px 8px;
+    box-shadow:0 6px 24px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+  }
+  .row{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;padding:16px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .row:last-child{border-bottom:0}
+
+  .left{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .clock{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .rmk{font-size:12px;color:var(--warn);font-weight:600}
+
+  .right{display:flex;align-items:baseline;gap:6px;flex:none}
+  .mins{
+    font-size:44px;
+    font-weight:800;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-1.5px;
+    color:#475467;
+  }
+  .unit{font-size:14px;font-weight:600;color:var(--muted)}
+  .row.first .mins{font-size:52px;color:#101828}
+  .row.first .unit{color:#344054}
+  .due{font-size:26px;font-weight:800;color:var(--ok);letter-spacing:0}
+  .row.first .due{font-size:30px}
+
+  /* ---------- status / empty ---------- */
+  .empty{padding:34px 0;text-align:center;color:var(--muted);font-size:15px;line-height:1.6}
+  .empty .big{font-size:17px;font-weight:700;color:#344054;display:block;margin-bottom:4px}
+  .spinner{
+    width:22px;height:22px;border-radius:50%;
+    border:3px solid var(--line);border-top-color:var(--muted);
+    margin:0 auto 12px;animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- footer ---------- */
+  .foot{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-top:12px;font-size:12.5px;color:var(--muted);
+  }
+  .status{display:flex;align-items:center;gap:6px;min-width:0}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+  .dot.stale{background:var(--warn)}
+  .dot.err{background:var(--err)}
+  .dot.loading{background:#98a2b3}
+  .statusText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  button{
+    font:inherit;font-size:12.5px;font-weight:600;color:#344054;
+    background:#fff;border:1px solid var(--line);border-radius:9px;
+    padding:7px 13px;cursor:pointer;flex:none;
+    transition:background .15s;
+  }
+  button:hover{background:#f9fafb}
+  button:active{transform:translateY(1px)}
+
+  .notice{margin-top:26px;font-size:11.5px;color:#98a2b3;line-height:1.5;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="badge">B3A</div>
+    <div class="co">城巴 Citybus</div>
+  </div>
+
+  <div class="boards">
+
+    <!-- 富泰邨 → 深圳灣口岸 -->
+    <section class="board" id="board-out">
+      <div class="dir">
+        <span>富泰邨 (青山公路)</span>
+        <span class="arrow">&rarr;</span>
+        <span class="port">深圳灣口岸</span>
+      </div>
+      <div class="card" id="card-out">
+        <div class="empty"><div class="spinner"></div>載入中…</div>
+      </div>
+      <div class="foot">
+        <div class="status">
+          <span class="dot loading" id="dot-out"></span>
+          <span class="statusText" id="status-out">正在取得班次…</span>
+        </div>
+        <button type="button" data-refresh="out">立即更新</button>
+      </div>
+    </section>
+
+    <!-- 深圳灣口岸 → 富泰邨 -->
+    <section class="board" id="board-in">
+      <div class="dir">
+        <span class="port">深圳灣口岸</span>
+        <span class="arrow">&rarr;</span>
+        <span>富泰邨</span>
+      </div>
+      <div class="sub">途經富泰邨 · 終點山景邨 · 時間為口岸開出時間</div>
+      <div class="card" id="card-in">
+        <div class="empty"><div class="spinner"></div>載入中…</div>
+      </div>
+      <div class="foot">
+        <div class="status">
+          <span class="dot loading" id="dot-in"></span>
+          <span class="statusText" id="status-in">正在取得班次…</span>
+        </div>
+        <button type="button" data-refresh="in">立即更新</button>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="notice">
+    資料來源：DATA.GOV.HK 城巴實時到站數據 · 每 30 秒自動更新<br>
+    Data source: DATA.GOV.HK (Citybus real-time ETA) · auto-refresh 30 s
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var REFRESH_MS = 30000;
+  var DUE_WINDOW_S = 45;   /* show "即將開出" within this many seconds of the ETA */
+
+  /*
+    Stop IDs (Citybus / DATA.GOV.HK):
+      003261  富泰邨, 青山公路      outbound (O) -> 深圳灣口岸
+      003208  深圳灣口岸            inbound  (I) -> 富泰邨 (terminus 山景邨)
+  */
+  var BOARDS = [
+    { key: "out", stop: "003261", dir: "O", max: 4 },
+    { key: "in",  stop: "003208", dir: "I", max: 3 }
+  ];
+
+  /* ---------------- helpers ---------------- */
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+  function hhmm(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* minutes remaining, floored (standard countdown behaviour) */
+  function minutesLeft(eta, now) {
+    return Math.floor((eta.getTime() - now) / 60000);
+  }
+
+  /* ---------------- board setup ---------------- */
+
+  var boards = BOARDS.map(function (cfg) {
+    return {
+      key: cfg.key,
+      dir: cfg.dir,
+      max: cfg.max,
+      api: "https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/" + cfg.stop + "/B3A",
+      cardEl: document.getElementById("card-" + cfg.key),
+      dotEl: document.getElementById("dot-" + cfg.key),
+      statusEl: document.getElementById("status-" + cfg.key),
+      buses: [],
+      dataTimestamp: null,
+      lastOk: null,
+      state: "loading",     /* loading | ok | stale | err */
+      errMsg: ""
+    };
+  });
+
+  var nextRefreshAt = Date.now() + REFRESH_MS;
+
+  /* ---------------- data ---------------- */
+
+  function fetchBoard(b) {
+    return fetch(b.api, { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        var rows = (json && json.data) || [];
+        b.buses = rows
+          .filter(function (r) {
+            /* keep only this direction, and only real ETAs */
+            return r && r.eta && r.dir === b.dir;
+          })
+          .map(function (r) {
+            return { eta: new Date(r.eta), rmk: r.rmk_tc || r.rmk_en || "" };
+          })
+          .filter(function (r) { return !isNaN(r.eta.getTime()); })
+          .sort(function (a, c) { return a.eta - c.eta; });
+
+        b.dataTimestamp = json && json.generated_timestamp ? new Date(json.generated_timestamp) : null;
+        b.lastOk = new Date();
+        b.state = "ok";
+        b.errMsg = "";
+      })
+      .catch(function (err) {
+        b.errMsg = err && err.message ? err.message : String(err);
+        b.state = b.lastOk ? "stale" : "err";
+      });
+  }
+
+  /* ---------------- render ---------------- */
+
+  function renderBoard(b, now) {
+    if (b.state === "loading") {
+      b.cardEl.innerHTML = '<div class="empty"><div class="spinner"></div>載入中…</div>';
+    } else if (b.state === "err") {
+      b.cardEl.innerHTML =
+        '<div class="empty"><span class="big">無法取得班次資料</span>' +
+        "請檢查網絡連線，稍後會自動重試。<br><small>" + escapeHtml(b.errMsg) + "</small></div>";
+    } else {
+      var upcoming = b.buses.filter(function (x) {
+        return x.eta.getTime() > now.getTime() - DUE_WINDOW_S * 1000;
+      }).slice(0, b.max);
+
+      if (!upcoming.length) {
+        b.cardEl.innerHTML =
+          '<div class="empty"><span class="big">暫無即將開出的班次</span>' +
+          "服務時間以外，或班次資料尚未提供。<br>系統會每 30 秒自動再查。</div>";
+      } else {
+        b.cardEl.innerHTML = upcoming.map(function (x, i) {
+          var m = minutesLeft(x.eta, now);
+          var right = m <= 0
+            ? '<span class="due">即將開出</span>'
+            : '<span class="mins">' + m + '</span><span class="unit">分鐘</span>';
+
+          return '<div class="row' + (i === 0 ? " first" : "") + '">' +
+                   '<div class="left">' +
+                     '<span class="clock">' + hhmm(x.eta) + " 開出</span>" +
+                     (x.rmk ? '<span class="rmk">' + escapeHtml(x.rmk) + "</span>" : "") +
+                   "</div>" +
+                   '<div class="right">' + right + "</div>" +
+                 "</div>";
+        }).join("");
+      }
+    }
+
+    /* status line */
+    b.dotEl.className = "dot " + b.state;
+
+    var text;
+    if (b.state === "loading") {
+      text = "正在取得班次…";
+    } else if (b.state === "err") {
+      text = "連線失敗，重試中…";
+    } else {
+      var secs = Math.max(0, Math.round((nextRefreshAt - now.getTime()) / 1000));
+      var stamp = b.dataTimestamp ? "資料 " + hhmm(b.dataTimestamp) : "資料已更新";
+      text = (b.state === "stale" ? "數據可能過時 · " : "") + stamp + " · " + secs + " 秒後更新";
+    }
+    if (b.statusEl.textContent !== text) b.statusEl.textContent = text;
+  }
+
+  function tick() {
+    var now = new Date();
+    boards.forEach(function (b) { renderBoard(b, now); });
+  }
+
+  /* ---------------- loop ---------------- */
+
+  function refresh(only) {
+    if (!only) nextRefreshAt = Date.now() + REFRESH_MS;
+    var targets = only ? boards.filter(function (b) { return b.key === only; }) : boards;
+    if (only) {
+      targets.forEach(function (b) { b.state = b.lastOk ? "stale" : "loading"; });
+    }
+    return Promise.allSettled(targets.map(fetchBoard)).then(tick);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-refresh]"), function (btn) {
+    btn.addEventListener("click", function () { refresh(btn.getAttribute("data-refresh")); });
+  });
+
+  refresh();
+  setInterval(function () { refresh(); }, REFRESH_MS);   /* fetch both every 30 s */
+  setInterval(tick, 1000);                               /* re-render countdowns every 1 s */
+
+  /* refresh right away when the page becomes visible again */
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) refresh();
+  });
+})();
+</script>
+</body>
+</html>
